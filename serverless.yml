@@ -1,0 +1,76 @@
+service: questrade-accounts-service
+
+frameworkVersion: '2'
+
+plugins:
+  - serverless-api-gateway-throttling
+  - serverless-iamroles # temporary fix until "serverless-iam-roles-per-function" is fixed
+  - serverless-pseudo-parameters
+  # - serverless-iam-roles-per-function
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: ${file(config.yml):settings.region}
+  memorySize: 128
+  versionFunctions: false
+  private: ${file(config.yml):private}
+  settings: ${file(config.yml):settings}
+  iamManagedPolicies:
+    - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - s3:GetObject
+        - s3:PutObject    
+      Resource:
+        - "arn:aws:s3:::${self:provider.private.bucketName}/*"
+  environment:
+    QT_DOMAIN: ${self:provider.private.qtDomain}
+    QT_CLIENT_ID: ${self:provider.private.qtClientId}
+    REDIRECT_URI: ${self:provider.private.redirectURI}
+    BUCKET_NAME: ${self:provider.private.bucketName}
+    AUTH_DATA_FILENAME: ${self:provider.private.authDataFileName}
+    GET_URL_PUB_KEY: ${self:provider.private.getUrlPubKey}
+    GENERIC_ERROR_MESSAGE: ${self:provider.settings.genericErrorMessage}
+    MD5_SCRAMBLE_MULTIPLIER: ${self:provider.settings.md5ScrambleMultiplier}
+
+custom:
+  webpack:
+    includeModules:
+      forceExclude:
+        - aws-sdk
+  apiGatewayThrottling:
+    maxRequestsPerSecond: 2
+    maxConcurrentRequests: 2
+
+functions:
+  qtTokenExchange:
+    handler: src/qtTokenExchange.handler
+    events:
+      - http:
+          method: get
+          path: exchange-token
+          cors: true
+  fetchQTAccountsInfo:
+    handler: src/qtAccountsInfoFetcher.handler
+    events:
+      - http:
+          method: get
+          path: retrieve-accounts-info
+          cors: true
+      - http:
+          method: post
+          path: retrieve-accounts-info
+          cors: true
+  getWSInfo:
+    handler: src/getWSInfo.handler
+    events:
+      - http:
+          method: get
+          path: get-websocket-info
+          cors: true
+      - http:
+          method: post
+          path: get-websocket-info
+          cors: true

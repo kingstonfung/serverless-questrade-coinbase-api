@@ -80,13 +80,35 @@ Bottom line: Just be careful and don't toss around URLs in the open... or else p
 
 **A**: It's _good enough_, just watch what you're doing as you setup the S3 bucket. Of course Secrets Manager is better, but they're too costly for a fun project.
 
-**Q**: Hashed Emails as S3 "folders" and urls !?
+**Q**: Hashed emails as S3 "folders" and urls !?
 
 **A**: It's MD5 hashed `{x}` number of times (privately set in `config.yml`), makes it a lot harder to guess by average users. Of course Cognito User Pools is better, perhaps that can be a future iteration...
 
 **Q**: Too many secrets in a common yml file!
 
 **A**: Most of these are public keys and non-sensitive info. Also gitignored so other coders shouldn't be able to pry open your storage...
+
+## Thoughts:
+### Short Term:
+- Unit & Integration testing would be great (But AWS CodeBuild has very limiting build minutes)
+- Script to generate `config.yml`
+- A better way of authenticating users, need to stop tossing around hash in URLs
+- Optimize the initial setup steps
+
+### Medium Term:
+- Prettier front end for `get` requests! React, SPA, etc etc
+- Also pretty-up the `post` responses
+- Open up endpoints to allow more attributes consumptions
+- Widen Questrade's 1-to-1 WebSocket by using AWS? That way, multiple devices can stream the same data simultaneously
+- [Candlesticks](https://www.questrade.com/api/documentation/rest-operations/market-calls/markets-candles-id)!
+
+### Longer Term:
+- Create some Postman API examples?
+- Email notifications on security activities? (Amazon SES?)
+- Account balance notifications?
+- GraphQL for merging stock data along with sentiments/news/tweets/etc?
+- ~~whales watching~~ options activities watching
+- Some data visualization would be cool perhaps...
 
 ## More development to come... happy printing! 💎 🙌
 #### (Disclaimer: Neither myself or this project was sponsored by Questrade!)

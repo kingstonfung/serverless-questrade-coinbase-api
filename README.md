@@ -101,6 +101,7 @@ Bottom line: Just be careful and don't toss around URLs in the open... or else p
 - Open up endpoints to allow more attributes consumptions
 - Widen Questrade's 1-to-1 WebSocket by using AWS? That way, multiple devices can stream the same data simultaneously
 - [Candlesticks](https://www.questrade.com/api/documentation/rest-operations/market-calls/markets-candles-id)!
+- Figure out `dev` and `prod` stages for this serverless config
 
 ### Longer Term:
 - Create some Postman API examples?

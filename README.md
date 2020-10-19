@@ -21,7 +21,32 @@
   - If `POST`: returns JSON data containing info to setup WebSocket
   - If `GET` : returns an ugly html with WS connection established. Page refreshes every 30 minutes as per Questrade's documentation
 
-## You'll need a create a `config.yml` file to get started. For example:
+## Prerequisites
+- You'll need a Questrade account
+- Some basic knowledge of [Serverless, lambda with NodeJS](https://www.serverless.com/framework/docs/providers/aws/guide/quick-start/)
+- Understanding of [Questrade's API](https://www.questrade.com/api/documentation/getting-started)
+- You have [an AWS Account](https://aws.amazon.com/)
+- [Create a S3 bucket](https://docs.aws.amazon.com/AmazonS3/latest/user-guide/create-bucket.html) (And then note down the name)
+- Run `yarn` or `npm install`
+- [Install](https://www.npmjs.com/package/serverless) `serverless` on your system
+
+## Quick Start Guide:
+1. Create a `config.yml` file at the project root directory with your own values as shown below
+1. Do a `serverless deploy` and **take note of the endpoints URLs**
+1. Go back to `config.yml` and enter the url (from above) ending `/exchange-token` as the value for `redirectURI` (this step is to be improved)
+1. Sign in to your Questrade account, click on "App hub" and register your own person app
+1. Enter the url again as a "Call back URL", the one ending `/exchange-token`
+1. Go to the Questrade oAuth URL with the `redirect_uri` as your exchange-token endpoint, such as: `https://login.questrade.com/oauth2/authorize?client_id={{ "Consumer key" from Questrade }}&response_type=code&redirect_uri={{ exchange-token endpoint }}?email={{ any email }}`
+1. After authenticating, Questrade will redirect you to the token exchange endpoint. If successful, you should see a hash number. This is the key to access your other endpoints.
+1. Go to the endpoint ending `/retrieve-accounts-info` with your hash to access your account info
+1. Go to the endpoint ending `/get-websocket-info` with your hash and ticker symbols to see real-time market data using WebSocket
+
+## Removing The Stack:
+1. Run `serverless remove`
+1. Delete the S3 bucket that you created
+1. Delete the application registered at Questrade
+
+## Creating the `config.yml` file to get started. For example:
 ```yml
 private:
   region: us-west-2
@@ -44,7 +69,7 @@ Once an user authenticates with your app through Quesetrade, the only security m
 
 Questrade does not allow trade exections done via API unless the app/developer goes through a compliance application process. Although all information handled in this project is not personally-identifiable, but please use caution as you toy around this project.
 
-Bottom line: Just be careful and don't toss around URLs in the open... or else people could find out how much money you've got in your accouts.
+Bottom line: Just be careful and don't toss around URLs in the open... or else people could find out how much money you've got in your accounts.
 
 ## FAQ:
 **Q**: How do I.....
@@ -63,4 +88,5 @@ Bottom line: Just be careful and don't toss around URLs in the open... or else p
 
 **A**: Most of these are public keys and non-sensitive info. Also gitignored so other coders shouldn't be able to pry open your storage...
 
-## More to come... happy printing! 💎 🙌
+## More development to come... happy printing! 💎 🙌
+#### (Disclaimer: Neither myself or this project was sponsored by Questrade!)

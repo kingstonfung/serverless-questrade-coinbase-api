@@ -6,7 +6,6 @@ const { isAuthTokenExpired } = require('./utils/isTokenExpired');
 const { buildWSSUrl } = require('./utils/buildWSSUrl');
 
 module.exports.handler = async event => {
-  console.log('event ===', event);
   try {
     const symbols = event.queryStringParameters && event.queryStringParameters.symbols;
     const hash = event.queryStringParameters && event.queryStringParameters.hash;

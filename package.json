@@ -5,8 +5,9 @@
   "author": "Kingston Fung <10535453+kingstonfung@users.noreply.github.com>",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.20.0",
-    "crypto-js": "^4.0.0"
+    "axios": "^0.21.1",
+    "crypto-js": "^4.0.0",
+    "node-fetch": "^2.6.1"
   },
   "devDependencies": {
     "aws-sdk": "^2.771.0",

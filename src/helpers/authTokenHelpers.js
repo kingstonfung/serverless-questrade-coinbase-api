@@ -6,10 +6,15 @@ const {
   QT_DOMAIN,
   QT_CLIENT_ID,
   REDIRECT_URI,
+  CB_AUTH_DATA_FILENAME,
+  CB_DOMAIN,
+  CB_CLIENT_ID,
+  CB_CLIENT_SECRET,
 } = require('../utils/constants');
 
-const getCredentialsTokenFromStorage = async (id) => {
-  const data = await getObject(BUCKET_NAME(), `${id}/${AUTH_DATA_FILENAME()}`);
+const getCredentialsTokenFromStorage = async (id, exchange = 'qt') => {
+  const filename = exchange === 'qt' ? AUTH_DATA_FILENAME() : CB_AUTH_DATA_FILENAME();
+  const data = await getObject(BUCKET_NAME(), `${id}/${filename}`);
   const jsonStr = data.Body.toString();
   const authInfo = JSON.parse(jsonStr);
   try {
@@ -19,8 +24,17 @@ const getCredentialsTokenFromStorage = async (id) => {
   }
 };
 
-const refreshAccessToken = async (refreshToken, id) => {
-  const url = `${QT_DOMAIN()}?grant_type=refresh_token&refresh_token=${refreshToken}`;
+const refreshAccessToken = async (refreshToken, id, exchange = 'qt') => {
+  let url;
+  const filename = exchange === 'qt' ? AUTH_DATA_FILENAME() : CB_AUTH_DATA_FILENAME();
+
+  if (exchange === 'qt') {
+    url = `${QT_DOMAIN()}?grant_type=refresh_token&refresh_token=${refreshToken}`;
+  } else if (exchange === 'cb') {
+    const clientId = await CB_CLIENT_ID();
+    const clientSecret = await CB_CLIENT_SECRET();
+    url = `${CB_DOMAIN()}?grant_type=refresh_token&refresh_token=${refreshToken}&client_id=${clientId}&client_secret=${clientSecret}`;
+  }
 
   try {
     const { data: authExchangeData } = await axios.post(url);
@@ -29,7 +43,7 @@ const refreshAccessToken = async (refreshToken, id) => {
     await putObject(
       JSON.stringify(authExchangeData, null, 2),
       BUCKET_NAME(),
-      `${id}/${AUTH_DATA_FILENAME()}`,
+      `${id}/${filename}`,
     );
 
     return Promise.resolve(authExchangeData);
@@ -38,18 +52,36 @@ const refreshAccessToken = async (refreshToken, id) => {
   }
 };
 
-const exchangeAuthCodeForAccessToken = async (code, id) => {
-  const url = `${QT_DOMAIN()}?client_id=${QT_CLIENT_ID()}&code=${code}&redirect_uri=${REDIRECT_URI()}&grant_type=authorization_code`;
+const exchangeAuthCodeForAccessToken = async (code, id, redirectURI, exchange = 'qt') => {
+  const originatingAuthURL = redirectURI || REDIRECT_URI();
+
+  let url;
+  let dataFileName;
+
+  if (exchange === 'qt') {
+    url = `${QT_DOMAIN()}?client_id=${QT_CLIENT_ID()}&code=${code}&redirect_uri=${originatingAuthURL}&grant_type=authorization_code`;
+    dataFileName = AUTH_DATA_FILENAME();
+  } else if (exchange === 'cb') {
+    const clientId = await CB_CLIENT_ID();
+    const clientSecret = await CB_CLIENT_SECRET();
+    url = `${CB_DOMAIN()}?client_id=${clientId}&code=${code}&client_secret=${clientSecret}&redirect_uri=${originatingAuthURL}&grant_type=authorization_code`;
+    dataFileName = CB_AUTH_DATA_FILENAME();
+  }
 
   try {
     const response = await axios.post(url);
     const authExchangeData = response.data;
-    authExchangeData.timestamp = +new Date();
+
+    if (exchange === 'qt') {
+      authExchangeData.timestamp = +new Date();
+    } else if (exchange === 'cb') {
+      authExchangeData.timestamp = authExchangeData.created_at;
+    }
 
     await putObject(
       JSON.stringify(authExchangeData, null, 2),
       BUCKET_NAME(),
-      `${id}/${AUTH_DATA_FILENAME()}`,
+      `${id}/${dataFileName}`,
     );
 
     return Promise.resolve();

@@ -22,9 +22,14 @@ provider:
     - Effect: "Allow"
       Action:
         - s3:GetObject
-        - s3:PutObject    
+        - s3:PutObject
       Resource:
         - "arn:aws:s3:::${self:provider.private.bucketName}/*"
+    - Effect: Allow
+      Action:
+        - secretsmanager:GetSecretValue
+      Resource:
+        - "arn:aws:secretsmanager:${self:provider.private.secretsARNPath}:*"
   environment:
     QT_DOMAIN: ${self:provider.private.qtDomain}
     QT_CLIENT_ID: ${self:provider.private.qtClientId}
@@ -34,6 +39,11 @@ provider:
     GET_URL_PUB_KEY: ${self:provider.private.getUrlPubKey}
     GENERIC_ERROR_MESSAGE: ${self:provider.settings.genericErrorMessage}
     MD5_SCRAMBLE_MULTIPLIER: ${self:provider.settings.md5ScrambleMultiplier}
+    LOCALHOST_OVERRIDE_PATH: ${self:provider.private.localhostOverride}
+    CB_DOMAIN: ${self:provider.private.cbDomain}
+    CB_AUTH_DATA_FILENAME: ${self:provider.private.cbAuthDataFileName}
+    CB_API_PATH: ${self:provider.private.cbAPIPath}    
+    CB_API_VERSION: ${self:provider.private.cbAPIVersion}
 
 custom:
   webpack:
@@ -45,6 +55,13 @@ custom:
     maxConcurrentRequests: 2
 
 functions:
+  localhostRedirect:
+    handler: src/localhostRedirect.handler
+    events:
+      - http:
+          method: get
+          path: localhost-redirect
+          cors: true
   qtTokenExchange:
     handler: src/qtTokenExchange.handler
     events:
@@ -52,6 +69,14 @@ functions:
           method: get
           path: exchange-token
           cors: true
+      - http:
+          method: post
+          path: exchange-token
+          cors: true
+          integration: lambda
+          authorizer:
+            name: qt-dashboard-authorizer
+            arn: ${self:provider.private.userPoolARN}
   fetchQTAccountsInfo:
     handler: src/qtAccountsInfoFetcher.handler
     events:
@@ -63,6 +88,10 @@ functions:
           method: post
           path: retrieve-accounts-info
           cors: true
+          integration: lambda
+          authorizer:
+            name: qt-dashboard-authorizer
+            arn: ${self:provider.private.userPoolARN}
   getWSInfo:
     handler: src/getWSInfo.handler
     events:
@@ -74,3 +103,7 @@ functions:
           method: post
           path: get-websocket-info
           cors: true
+          integration: lambda
+          authorizer:
+            name: qt-dashboard-authorizer
+            arn: ${self:provider.private.userPoolARN}

@@ -4,21 +4,48 @@ const { symbolsToQuestradeId } = require('./helpers/symbolsToIDFetcher') ;
 const { GENERIC_ERROR_MESSAGE } = require('./utils/constants');
 const { isAuthTokenExpired } = require('./utils/isTokenExpired');
 const { buildWSSUrl } = require('./utils/buildWSSUrl');
+const { retrieveAccounts, retrieveAllAccountsInfo } = require('./helpers/accountHelpers');
 
 module.exports.handler = async event => {
   try {
-    const symbols = event.queryStringParameters && event.queryStringParameters.symbols;
-    const hash = event.queryStringParameters && event.queryStringParameters.hash;
+    let symbols;
+    let hash;
+    let questradeIDs;
+    let reqMethod = event.method || event.httpMethod;
     
-    if (!hash || hash === '' || !symbols || symbols === '') throw new Error(GENERIC_ERROR_MESSAGE());
+    if (reqMethod === 'POST') {
+      ({ symbols, hash } = JSON.parse(event.body));
+    } else if (reqMethod === 'GET') {
+      symbols = event.queryStringParameters && event.queryStringParameters.symbols;
+      hash = event.queryStringParameters && event.queryStringParameters.hash;
+    }
+
+    if (!hash || hash === '') throw new Error(GENERIC_ERROR_MESSAGE());
 
     let authInfo = await getCredentialsTokenFromStorage(hash);
+    if (!symbols || symbols === '') {
+      questradeIDs = [];
+
+      const { accounts } = await retrieveAccounts(authInfo);
+      const allAccountPositions = await retrieveAllAccountsInfo(accounts, authInfo, 'positions');
+      
+      allAccountPositions.forEach(account => {
+        account.positions.forEach(position => questradeIDs.push(position.symbolId));
+      });
+
+      console.log('questradeIDs', questradeIDs);
+    }
     
     if (isAuthTokenExpired(authInfo)) {
       authInfo = await refreshAccessToken(authInfo.refresh_token, hash);
     }
 
-    const questradeIDs = await symbolsToQuestradeId(authInfo, symbols);
+    if (symbols && symbols !== '') {
+      questradeIDs = await symbolsToQuestradeId(authInfo, symbols);
+    }
+
+    if (!questradeIDs) throw new Error(GENERIC_ERROR_MESSAGE());
+
     const questradeIDsComma = questradeIDs.join(',');
     const streamPort = await authWSStreamingPort(authInfo, questradeIDsComma);
 
@@ -27,7 +54,7 @@ module.exports.handler = async event => {
       key: authInfo.access_token,
     };
 
-    if (event.httpMethod === 'GET') {
+    if (reqMethod === 'GET') {
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'text/html' },
@@ -85,7 +112,7 @@ module.exports.handler = async event => {
           </html>
         `,
       };
-    } else if (event.httpMethod === 'POST') {
+    } else if (reqMethod === 'POST') {
       return { statusCode: 200, body: JSON.stringify(payload) }
     }
   } catch (error) {

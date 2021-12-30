@@ -1,9 +1,10 @@
-# AWS Serverless <> Questrade API (WIP)
+# AWS Serverless <> Questrade and Coinbase API (WIP 2021-12-30)
 
 ## Fun serverless weekend project that connects with Questrade API:
-- Handles Questrade's oAuth process
-- Fetches account info
-- Return authenticated WebSocket info (or renders an ugly html page that'll update ticker prices)
+- Handles [Questrade's OAuth2](https://www.questrade.com/api/documentation/authorization) process
+- Handles [Coinbase's OAuth2](https://developers.coinbase.com/docs/wallet/coinbase-connect/reference) process
+- Fetches account (or wallet) info
+- Return authenticated WebSocket info (Questrade only)(or renders an ugly html page that'll update ticker prices)
 
 ## This project spins off 3 endpoints:
 - `/exchange-token`: Exchanges auth code from Questrade oAuth Client for access token & refresh token, then store those info in S3 (yes I said S3, please see FAQ below)
@@ -14,6 +15,7 @@
 - `/retrieve-accounts-info`: Pulls all the user's account info. Requires you to pass in the hashed user email to the `get` url
   - `?hash=0F908424DCEBC49548EC2977F501FE83` : Required to know which user info to use
   - `&simpleResponse=true` : Optional, will simplify the output to $CAD balance only (great for spreadsheets)
+  - `&exchange=cb` : Optional, defaults to Questrade (`qt`). Accepts Coinbase (`cb`) as well
   - Returns the account details from the authenticated user
 - `/get-websocket-info`: Returns all the necessary info to the client that would initiate a WebSocket connection, by supplying ticker symbols. Requires you to pass in the hashed email in the `get` url
   - `?hash=0F908424DCEBC49548EC2977F501FE83` : Required to know which user info to use
@@ -22,15 +24,17 @@
   - If `GET` : returns an ugly html with WS connection established. Page refreshes every 30 minutes as per Questrade's documentation
 
 ## Prerequisites
-- You'll need a Questrade account
+- You'll need a Questrade and/or Coinbase account
 - Some basic knowledge of [Serverless, lambda with NodeJS](https://www.serverless.com/framework/docs/providers/aws/guide/quick-start/)
 - Understanding of [Questrade's API](https://www.questrade.com/api/documentation/getting-started)
+- Understanding of [Coinbase's API](https://developers.coinbase.com/docs/wallet/coinbase-connect/reference)
 - You have [an AWS Account](https://aws.amazon.com/)
 - [Create a S3 bucket](https://docs.aws.amazon.com/AmazonS3/latest/user-guide/create-bucket.html) (And then note down the name)
+- Store a set of secrets in Secrets Manager `cbClientId` & `cbClientSecret`
 - Run `yarn` or `npm install`
 - [Install](https://www.npmjs.com/package/serverless) `serverless` on your system
 
-## Quick Start Guide:
+## Quick Start Guide (Questrade):
 1. Create a `config.yml` file at the project root directory with your own values as shown below
 1. Do a `serverless deploy` and **take note of the endpoints URLs**
 1. Go back to `config.yml` and enter the url (from above) ending `/exchange-token` as the value for `redirectURI` (this step is to be improved)
@@ -56,13 +60,18 @@ private:
   redirectURI: the-url-of-your-services
   qtDomain: https://login.questrade.com/oauth2/token
   qtClientId: your-questrade-public-client-key
+  userPoolARN: arn:aws:cognito-idp:---your-cognito-user-pool-arn---
+  cbAuthDataFileName: json-for-storing-user-coinbase-creds.json
+  cbDomain: https://api.coinbase.com/oauth/token
+  cbAPIPath: https://api.coinbase.com
+  cbAPIVersion: '2021-12-27'
 settings:
   region: us-west-2
   genericErrorMessage: Random error msg to scare off the crows
   md5ScrambleMultiplier: any int so people can't easily guess MD5'ed emails
 ```
 
-## Early prototype warnings:
+<!-- ## Early prototype warnings:
 **Not suitable for commercial use, or risk averse users. For educational purpose only.**
 
 Once an user authenticates with your app through Quesetrade, the only security measure is their MD5 hashed email address, exposed as a `get` url query parameter. So if someone can guess your endpoints URL and the hash, they can potentially read account balances of a specific user.
@@ -113,3 +122,4 @@ Bottom line: Just be careful and don't toss around URLs in the open... or else p
 
 ## More development to come... happy printing! 💎 🙌
 #### (Disclaimer: Neither myself or this project was sponsored by Questrade!)
+ -->
